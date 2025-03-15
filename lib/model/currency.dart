@@ -1,4 +1,5 @@
 import '../database/sossoldi_database.dart';
+import '../repository/interfaces/currency_methods.dart';
 import 'base_entity.dart';
 
 const String currencyTable = 'currency';
@@ -33,7 +34,13 @@ class Currency extends BaseEntity {
     required this.mainCurrency,
   });
 
-  Currency copy({int? id, String? symbol, String? code, String? name, bool? mainCurrency, t}) =>
+  Currency copy(
+          {int? id,
+          String? symbol,
+          String? code,
+          String? name,
+          bool? mainCurrency,
+          t}) =>
       Currency(
           id: id ?? this.id,
           symbol: symbol ?? this.symbol,
@@ -57,7 +64,8 @@ class Currency extends BaseEntity {
       };
 }
 
-class CurrencyMethods extends SossoldiDatabase {
+class CurrencyMethods extends SossoldiDatabase implements ICurrencyMethods {
+  @override
   Future<Currency> getSelectedCurrency() async {
     final db = await database;
 
@@ -73,16 +81,22 @@ class CurrencyMethods extends SossoldiDatabase {
     } else {
       //fallback
       return const Currency(
-          id: 2, symbol: '\$', code: 'USD', name: "United States Dollar", mainCurrency: true);
+          id: 2,
+          symbol: '\$',
+          code: 'USD',
+          name: "United States Dollar",
+          mainCurrency: true);
     }
   }
 
+  @override
   Future<Currency> insert(Currency item) async {
     final db = await database;
     final id = await db.insert(currencyTable, item.toJson());
     return item.copy(id: id);
   }
 
+  @override
   Future<void> insertAll(List<Currency> list) async {
     final db = await database;
     for (Currency currency in list) {
@@ -90,6 +104,7 @@ class CurrencyMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<Currency> selectById(int id) async {
     final db = await database;
 
@@ -107,6 +122,7 @@ class CurrencyMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<List<Currency>> selectAll() async {
     final db = await database;
 
@@ -117,6 +133,7 @@ class CurrencyMethods extends SossoldiDatabase {
     return result.map((json) => Currency.fromJson(json)).toList();
   }
 
+  @override
   Future<int> updateItem(Currency item) async {
     final db = await database;
 
@@ -128,12 +145,15 @@ class CurrencyMethods extends SossoldiDatabase {
     );
   }
 
+  @override
   Future<int> deleteById(int id) async {
     final db = await database;
 
-    return await db.delete(currencyTable, where: '${CurrencyFields.id} = ?', whereArgs: [id]);
+    return await db.delete(currencyTable,
+        where: '${CurrencyFields.id} = ?', whereArgs: [id]);
   }
 
+  @override
   void changeMainCurrency(int id) async {
     final db = await database;
 

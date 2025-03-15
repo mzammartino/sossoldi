@@ -2,7 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../model/category_transaction.dart';
 import '../model/transaction.dart';
+import '../repository/interfaces/category_transaction_methods.dart';
 import 'transactions_provider.dart';
+
+final ICategoryTransactionMethods _categoryTransactionMethods =
+    CategoryTransactionMethods();
 
 final categoryTransactionTypeList = Provider<List<CategoryTransactionType>>(
     (ref) => [CategoryTransactionType.income, CategoryTransactionType.expense]);
@@ -17,13 +21,19 @@ final selectedCategoryIndexProvider =
     StateProvider.autoDispose<int>((ref) => -1);
 
 class AsyncCategoriesNotifier extends AsyncNotifier<List<CategoryTransaction>> {
+  final ICategoryTransactionMethods _categoryTransactionMethods;
+
+  AsyncCategoriesNotifier(
+      {required ICategoryTransactionMethods categoryTransactionMethods})
+      : _categoryTransactionMethods = categoryTransactionMethods;
+
   @override
   Future<List<CategoryTransaction>> build() async {
     return _getCategories();
   }
 
   Future<List<CategoryTransaction>> _getCategories() async {
-    final categories = await CategoryTransactionMethods().selectAll();
+    final categories = await _categoryTransactionMethods.selectAll();
     return categories;
   }
 
@@ -42,7 +52,7 @@ class AsyncCategoriesNotifier extends AsyncNotifier<List<CategoryTransaction>> {
 
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await CategoryTransactionMethods().insert(category);
+      await _categoryTransactionMethods.insert(category);
       ref.invalidate(categoriesByTypeProvider(category.type));
       return _getCategories();
     });
@@ -63,7 +73,7 @@ class AsyncCategoriesNotifier extends AsyncNotifier<List<CategoryTransaction>> {
 
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await CategoryTransactionMethods().updateItem(category);
+      await _categoryTransactionMethods.updateItem(category);
       return _getCategories();
     });
   }
@@ -71,7 +81,7 @@ class AsyncCategoriesNotifier extends AsyncNotifier<List<CategoryTransaction>> {
   Future<void> removeCategory(int categoryId) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await CategoryTransactionMethods().deleteById(categoryId);
+      await _categoryTransactionMethods.deleteById(categoryId);
       return _getCategories();
     });
   }
@@ -84,7 +94,8 @@ class AsyncCategoriesNotifier extends AsyncNotifier<List<CategoryTransaction>> {
 final categoriesProvider =
     AsyncNotifierProvider<AsyncCategoriesNotifier, List<CategoryTransaction>>(
         () {
-  return AsyncCategoriesNotifier();
+  return AsyncCategoriesNotifier(
+      categoryTransactionMethods: _categoryTransactionMethods);
 });
 
 final categoriesByTypeProvider =
@@ -93,7 +104,7 @@ final categoriesByTypeProvider =
   List<CategoryTransaction> categories = [];
   if (type != null) {
     categories =
-        await CategoryTransactionMethods().selectCategoriesByType(type);
+        await _categoryTransactionMethods.selectCategoriesByType(type);
   }
   return categories;
 });
@@ -107,10 +118,10 @@ final categoryMapProvider =
   Map<CategoryTransaction, double> categoriesMap = {};
 
   final categories =
-      await CategoryTransactionMethods().selectCategoriesByType(categoryType);
+      await _categoryTransactionMethods.selectCategoriesByType(categoryType);
 
   final transactionType =
-      CategoryTransactionMethods().categoryToTransactionType(categoryType);
+      _categoryTransactionMethods.categoryToTransactionType(categoryType);
 
   final transactionTypeList = typeMap.entries
       .where((entry) => entry.value == transactionType)
@@ -146,7 +157,7 @@ final categoryTotalAmountProvider = FutureProvider<double>((ref) async {
   final dateStart = ref.watch(filterDateStartProvider);
   final dateEnd = ref.watch(filterDateEndProvider);
   final transactionType =
-      CategoryTransactionMethods().categoryToTransactionType(categoryType);
+      _categoryTransactionMethods.categoryToTransactionType(categoryType);
 
   List<String> transactionTypeList = typeMap.entries
       .where((entry) => entry.value == transactionType)
@@ -170,17 +181,15 @@ final categoryTotalAmountProvider = FutureProvider<double>((ref) async {
 
 final transactionToCategoryProvider =
     Provider.family<CategoryTransactionType?, TransactionType>((ref, type) {
-  return CategoryTransactionMethods().transactionToCategoryType(type);
+  return _categoryTransactionMethods.transactionToCategoryType(type);
 });
 
 final categoryToTransactionProvider =
     Provider.family<TransactionType?, CategoryTransactionType>((ref, type) {
-  return CategoryTransactionMethods().categoryToTransactionType(type);
+  return _categoryTransactionMethods.categoryToTransactionType(type);
 });
 
-final monthlyTotalsProvider =
-    FutureProvider<List<double>>(
-        (ref) async {
+final monthlyTotalsProvider = FutureProvider<List<double>>((ref) async {
   final categoryType = ref.watch(categoryTypeProvider);
   final dateStart = ref.watch(filterDateStartProvider);
   //final dateEnd = ref.watch(filterDateEndProvider);
@@ -191,7 +200,7 @@ final monthlyTotalsProvider =
   final endOfYear = DateTime(dateStart.year, 12, 31);
 
   final transactionType =
-      CategoryTransactionMethods().categoryToTransactionType(categoryType);
+      _categoryTransactionMethods.categoryToTransactionType(categoryType);
 
   List<String> transactionTypeList = typeMap.entries
       .where((entry) => entry.value == transactionType)

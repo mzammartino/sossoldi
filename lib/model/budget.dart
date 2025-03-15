@@ -1,6 +1,7 @@
 import '../model/transaction.dart';
 import '../database/sossoldi_database.dart';
 import '../model/category_transaction.dart';
+import '../repository/interfaces/budget_methods.dart';
 import 'base_entity.dart';
 
 const String budgetTable = 'budget';
@@ -73,8 +74,9 @@ class Budget extends BaseEntity {
         BudgetFields.name: name,
         BudgetFields.amountLimit: amountLimit,
         BudgetFields.active: active ? 1 : 0,
-        BaseEntityFields.createdAt:
-            update ? createdAt?.toIso8601String() : DateTime.now().toIso8601String(),
+        BaseEntityFields.createdAt: update
+            ? createdAt?.toIso8601String()
+            : DateTime.now().toIso8601String(),
         BaseEntityFields.updatedAt: DateTime.now().toIso8601String(),
       };
 }
@@ -105,13 +107,15 @@ class BudgetStats extends BaseEntity {
       };
 }
 
-class BudgetMethods extends SossoldiDatabase {
+class BudgetMethods extends SossoldiDatabase implements IBudgetMethods {
+  @override
   Future<Budget> insert(Budget item) async {
     final db = await database;
     final id = await db.insert(budgetTable, item.toJson());
     return item.copy(id: id);
   }
 
+  @override
   Future<Budget> insertOrUpdate(Budget item) async {
     final db = await database;
 
@@ -130,8 +134,8 @@ class BudgetMethods extends SossoldiDatabase {
     final db = await database;
 
     try {
-      final exists =
-          await db.rawQuery("SELECT * FROM $budgetTable WHERE ${item.idCategory} = idCategory");
+      final exists = await db.rawQuery(
+          "SELECT * FROM $budgetTable WHERE ${item.idCategory} = idCategory");
       if (exists.isNotEmpty) {
         return true;
       }
@@ -141,6 +145,7 @@ class BudgetMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<Budget> selectById(int id) async {
     final db = await database;
 
@@ -158,6 +163,7 @@ class BudgetMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<List<Budget>> selectAll() async {
     final db = await database;
     final orderByASC = '${BudgetFields.createdAt} ASC';
@@ -166,6 +172,7 @@ class BudgetMethods extends SossoldiDatabase {
     return result.map((json) => Budget.fromJson(json)).toList();
   }
 
+  @override
   Future<List<Budget>> selectAllActive() async {
     final db = await database;
     final orderByASC = '${BudgetFields.createdAt} ASC';
@@ -174,6 +181,7 @@ class BudgetMethods extends SossoldiDatabase {
     return result.map((json) => Budget.fromJson(json)).toList();
   }
 
+  @override
   Future<List<BudgetStats>> selectMonthlyBudgetsStats() async {
     final db = await database;
     var query =
@@ -182,9 +190,11 @@ class BudgetMethods extends SossoldiDatabase {
 
     List<Budget> allBudgets = await selectAllActive();
 
-    List<BudgetStats> statsList = result.map((json) => BudgetStats.fromJson(json)).toList();
+    List<BudgetStats> statsList =
+        result.map((json) => BudgetStats.fromJson(json)).toList();
 
-    Set<int> resultBudgetIds = statsList.map((stats) => stats.idCategory).toSet();
+    Set<int> resultBudgetIds =
+        statsList.map((stats) => stats.idCategory).toSet();
 
     // Check for missing budgets and add them with a spent amount of 0
     for (var budget in allBudgets) {
@@ -201,7 +211,7 @@ class BudgetMethods extends SossoldiDatabase {
     return statsList;
   }
 
-
+  @override
   Future<int> updateItem(Budget item) async {
     final db = await database;
 
@@ -214,15 +224,19 @@ class BudgetMethods extends SossoldiDatabase {
     );
   }
 
+  @override
   Future<int> deleteById(int id) async {
     final db = await database;
 
-    return await db.delete(budgetTable, where: '${BudgetFields.id} = ?', whereArgs: [id]);
+    return await db
+        .delete(budgetTable, where: '${BudgetFields.id} = ?', whereArgs: [id]);
   }
 
+  @override
   Future<int> deleteByCategory(int id) async {
     final db = await database;
 
-    return await db.delete(budgetTable, where: '${BudgetFields.idCategory} = ?', whereArgs: [id]);
+    return await db.delete(budgetTable,
+        where: '${BudgetFields.idCategory} = ?', whereArgs: [id]);
   }
 }

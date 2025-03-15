@@ -1,4 +1,5 @@
 import '../database/sossoldi_database.dart';
+import '../repository/interfaces/category_transaction_methods.dart';
 import 'base_entity.dart';
 import 'transaction.dart';
 
@@ -106,15 +107,19 @@ class CategoryTransaction extends BaseEntity {
       };
 }
 
-class CategoryTransactionMethods extends SossoldiDatabase {
+class CategoryTransactionMethods extends SossoldiDatabase
+    with TransactionTypeCategory
+    implements ICategoryTransactionMethods {
   final orderByASC = '${CategoryTransactionFields.createdAt} ASC';
 
+  @override
   Future<CategoryTransaction> insert(CategoryTransaction item) async {
     final db = await database;
     final id = await db.insert(categoryTransactionTable, item.toJson());
     return item.copy(id: id);
   }
 
+  @override
   Future<CategoryTransaction> selectById(int id) async {
     final db = await database;
 
@@ -132,6 +137,7 @@ class CategoryTransactionMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<List<CategoryTransaction>> selectAll() async {
     final db = await database;
 
@@ -141,6 +147,7 @@ class CategoryTransactionMethods extends SossoldiDatabase {
     return result.map((json) => CategoryTransaction.fromJson(json)).toList();
   }
 
+  @override
   Future<List<CategoryTransaction>> selectCategoriesByType(
       CategoryTransactionType type) async {
     final db = await database;
@@ -161,6 +168,7 @@ class CategoryTransactionMethods extends SossoldiDatabase {
     }
   }
 
+  @override
   Future<int> updateItem(CategoryTransaction item) async {
     final db = await database;
 
@@ -173,30 +181,11 @@ class CategoryTransactionMethods extends SossoldiDatabase {
     );
   }
 
+  @override
   Future<int> deleteById(int id) async {
     final db = await database;
 
     return await db.delete(categoryTransactionTable,
         where: '${CategoryTransactionFields.id} = ?', whereArgs: [id]);
-  }
-
-  CategoryTransactionType? transactionToCategoryType(TransactionType type) {
-    switch (type) {
-      case TransactionType.income:
-        return CategoryTransactionType.income;
-      case TransactionType.expense:
-        return CategoryTransactionType.expense;
-      case TransactionType.transfer:
-        return null;
-    }
-  }
-
-  TransactionType categoryToTransactionType(CategoryTransactionType type) {
-    switch (type) {
-      case CategoryTransactionType.income:
-        return TransactionType.income;
-      case CategoryTransactionType.expense:
-        return TransactionType.expense;
-    }
   }
 }
